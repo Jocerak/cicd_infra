@@ -41,7 +41,7 @@ pipeline {
         ]) {
           echo "🚨 Terraform destroy en cours..."
           sh '''
-            terraform init
+            
             terraform destroy -auto-approve
           '''
         }
