@@ -50,7 +50,7 @@ pipeline {
             export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
             export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 
-            terraform destroy -auto-approve $TF_VAR_file
+            terraform apply -auto-approve $TF_VAR_file
           '''
         }
       }
