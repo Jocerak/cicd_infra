@@ -15,6 +15,21 @@ pipeline {
       }
     }
 
+    stage('🔍 Vérification tfstate') {
+      when {
+        expression { return params.CONFIRM == 'OUI' }
+      }
+      steps {
+        echo "📁 Vérification de la présence du fichier terraform.tfstate..."
+        sh '''
+          echo "Contenu du répertoire courant :"
+          ls -lh
+          echo "Contenu de terraform.tfstate (s'il existe) :"
+          cat terraform.tfstate || echo "❌ Fichier terraform.tfstate introuvable"
+        '''
+      }
+    }
+
     stage('⚠️ Destroy Terraform Infra') {
       when {
         expression { return params.CONFIRM == 'OUI' }
