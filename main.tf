@@ -79,7 +79,7 @@ resource "aws_security_group" "main_sg" {
 
 resource "aws_key_pair" "deployer_key" {
   key_name   = "my_key"
-  public_key = file("/home/adminsys/.ssh/my_key.pub")
+  public_key = file("./.ssh/my_key.pub")
   tags = {
     Name = "DeployerKey"
   }
