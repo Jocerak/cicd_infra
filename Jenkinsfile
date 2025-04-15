@@ -1,72 +1,92 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        TF_DIR = '.'                     // Dossier contenant main.tf, etc.
-        TF_PLAN = 'infra.tfplan'         // Nom du plan
+  environment {
+    TF_VAR_file = "infra.tfplan"
+  }
+
+  stages {
+
+    stage('🧾 Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    parameters {
-        booleanParam(name: 'DESTROY_INFRA', defaultValue: false, description: 'Détruire l’infrastructure après le déploiement ?')
+    stage('🧪 Test - Validation Terraform') {
+      steps {
+        echo '🔍 Validation de la syntaxe...'
+        sh 'terraform init -backend=false'
+        sh 'terraform validate'
+        echo '✅ Fichiers Terraform valides'
+      }
     }
 
-    stages {
+    stage('⚙️ Build - Génération du plan') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          sh '''
+            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 
-        stage('🧪 Test - Validation Terraform') {
-            steps {
-                dir(env.TF_DIR) {
-                    echo "🔍 Validation de la syntaxe..."
-                    sh 'terraform init -backend=false'
-                    sh 'terraform validate'
-                    echo "✅ Fichiers Terraform valides"
-                }
-            }
+            terraform init
+            terraform plan -out=$TF_VAR_file
+          '''
         }
-
-        stage('⚙️ Build - Génération du plan') {
-            steps {
-                dir(env.TF_DIR) {
-                    sh 'terraform init'
-                    sh "terraform plan -out=${TF_PLAN}"
-                    echo "✅ Plan généré : ${TF_PLAN}"
-                }
-            }
-        }
-
-        stage('✅ Validation manuelle') {
-            steps {
-                input message: 'Appliquer le plan Terraform ?', ok: 'Oui, déployer'
-            }
-        }
-
-        stage('🚀 Deploy - Application du plan') {
-            steps {
-                dir(env.TF_DIR) {
-                    sh "terraform apply -auto-approve ${TF_PLAN}"
-                    echo "✅ Infrastructure déployée"
-                }
-            }
-        }
-
-        stage('🧹 Optional Destroy') {
-            when {
-                expression { return params.DESTROY_INFRA }
-            }
-            steps {
-                dir(env.TF_DIR) {
-                    input message: 'Confirmer la destruction de l’infrastructure', ok: 'Détruire'
-                    sh 'terraform destroy -auto-approve'
-                }
-            }
-        }
+      }
     }
 
-    post {
-        success {
-            echo "🎉 Pipeline terminé avec succès !"
-        }
-        failure {
-            echo "❌ Échec du pipeline."
-        }
+    stage('✅ Validation manuelle') {
+      steps {
+        input message: 'Valider manuellement le déploiement ?'
+      }
     }
+
+    stage('🚀 Deploy - Application du plan') {
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          sh '''
+            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+
+            terraform apply -auto-approve $TF_VAR_file
+          '''
+        }
+      }
+    }
+
+    stage('🧹 Optional Destroy') {
+      when {
+        expression { return false } // change to true if you want auto destroy stage
+      }
+      steps {
+        withCredentials([
+          string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+          string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+          sh '''
+            export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+
+            terraform destroy -auto-approve
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    failure {
+      echo "❌ Échec du pipeline."
+    }
+    success {
+      echo "✅ Pipeline terminé avec succès."
+    }
+  }
 }
