@@ -39,12 +39,7 @@ pipeline {
       }
     }
 
-    stage('✅ Validation manuelle') {
-      steps {
-        input message: 'Valider manuellement le déploiement ?'
-      }
-    }
-
+    
     stage('🚀 Deploy - Application du plan') {
       steps {
         withCredentials([
