@@ -1,0 +1,51 @@
+pipeline {
+  agent any
+
+  environment {
+    AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+    AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+  }
+
+  parameters {
+    string(name: 'CONFIRM', defaultValue: '', description: 'Tapez "OUI" pour confirmer la destruction de l\'infrastructure.')
+  }
+
+  stages {
+    stage('🧹 Confirmation') {
+      when {
+        expression { return params.CONFIRM == 'OUI' }
+      }
+      steps {
+        echo "✅ Confirmation validée. On lance la destruction."
+      }
+    }
+
+    stage('⚠️ Destroy Terraform Infra') {
+      when {
+        expression { return params.CONFIRM == 'OUI' }
+      }
+      steps {
+        echo "🚨 Terraform destroy en cours..."
+        sh '''
+          terraform init
+          terraform destroy -auto-approve
+        '''
+      }
+    }
+
+    stage('⛔ Annulation') {
+      when {
+        expression { return params.CONFIRM != 'OUI' }
+      }
+      steps {
+        echo "❌ Destruction annulée. Veuillez entrer CONFIRM=OUI pour valider."
+      }
+    }
+  }
+
+  post {
+    always {
+      echo "🧾 Fin du pipeline de destruction."
+    }
+  }
+}
