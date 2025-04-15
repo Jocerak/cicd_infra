@@ -79,8 +79,9 @@ resource "aws_security_group" "main_sg" {
 
 resource "aws_key_pair" "deployer_key" {
   key_name   = "deployer"
-  public_key = C:\Users\games/.ssh/id_rsa.pub"
+  public_key = file("${path.module}/ssh/my_key.pub")
 }
+
 
 
 resource "aws_s3_bucket" "nextcloud_data" {
