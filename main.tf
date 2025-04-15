@@ -78,12 +78,10 @@ resource "aws_security_group" "main_sg" {
 }
 
 resource "aws_key_pair" "deployer_key" {
-  key_name   = "my_key"
-  public_key = file("./.ssh/my_key.pub")
-  tags = {
-    Name = "DeployerKey"
-  }
+  key_name   = "deployer"
+  public_key = C:\Users\games/.ssh/id_rsa.pub"
 }
+
 
 resource "aws_s3_bucket" "nextcloud_data" {
   bucket = "nextcloud-data-${random_id.suffix.hex}"
