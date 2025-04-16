@@ -6,6 +6,18 @@ pipeline {
   }
 
   stages {
+    stage('📥 Copier terraform.tfstate du job apply') {
+      steps {
+        copyArtifacts(
+          projectName: 'nom_du_job_apply', // ← à adapter
+          selector: lastSuccessful(),
+          filter: 'terraform.tfstate',
+          target: '.',
+          flatten: true
+        )
+      }
+    }
+
     stage('🧹 Confirmation') {
       when {
         expression { return params.CONFIRM == 'OUI' }
@@ -20,17 +32,16 @@ pipeline {
         expression { return params.CONFIRM == 'OUI' }
       }
       steps {
-        echo "📁 Vérification de la présence du fichier terraform.tfstate..."
         sh '''
           echo "Contenu du répertoire courant :"
           ls -lh
-          echo "Contenu de terraform.tfstate (s'il existe) :"
-          cat terraform.tfstate || echo "❌ Fichier terraform.tfstate introuvable"
+          echo "Contenu de terraform.tfstate :"
+          cat terraform.tfstate || echo "❌ Fichier manquant"
         '''
       }
     }
 
-    stage('⚠️ Destroy Terraform Infra') {
+    stage('⚠️ Terraform Destroy') {
       when {
         expression { return params.CONFIRM == 'OUI' }
       }
@@ -39,9 +50,8 @@ pipeline {
           string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
           string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
-          echo "🚨 Terraform destroy en cours..."
           sh '''
-            
+            terraform init
             terraform destroy -auto-approve
           '''
         }
@@ -53,7 +63,7 @@ pipeline {
         expression { return params.CONFIRM != 'OUI' }
       }
       steps {
-        echo "❌ Destruction annulée. Veuillez entrer CONFIRM=OUI pour valider."
+        echo "❌ Destruction annulée. Entrez CONFIRM=OUI pour valider."
       }
     }
   }
